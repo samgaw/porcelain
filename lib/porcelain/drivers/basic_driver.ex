@@ -52,8 +52,14 @@ defmodule Porcelain.Driver.Basic do
     opts = Common.compile_options(opts)
     exe = find_executable(prog, shell_flag)
     port = Port.open(exe, port_options(shell_flag, prog, args, opts))
+
     Common.communicate(
-      port, opts[:in], opts[:out], opts[:err], __MODULE__, async_input: opts[:async_in]
+      port,
+      opts[:in],
+      opts[:out],
+      opts[:err],
+      __MODULE__,
+      async_input: opts[:async_in]
     )
   end
 
@@ -61,54 +67,61 @@ defmodule Porcelain.Driver.Basic do
     opts = Common.compile_options(opts)
     exe = find_executable(prog, shell_flag)
 
-    {out_opt, out_ret} = case opts[:out] do
-      :stream ->
-        {:ok, server} = StreamServer.start()
-        {{:stream, server}, Stream.unfold(server, &Common.read_stream/1)}
+    {out_opt, out_ret} =
+      case opts[:out] do
+        :stream ->
+          {:ok, server} = StreamServer.start()
+          {{:stream, server}, Stream.unfold(server, &Common.read_stream/1)}
 
-      {atom, ""} = opt when atom in [:string, :iodata] ->
-        {opt, atom}
+        {atom, ""} = opt when atom in [:string, :iodata] ->
+          {opt, atom}
 
-      other ->
-        {other, other}
-    end
+        other ->
+          {other, other}
+      end
 
     pid = spawn(fn ->
       port = Port.open(exe, port_options(shell_flag, prog, args, opts))
+
       Common.communicate(
-        port, opts[:in], out_opt, opts[:err], __MODULE__, async_input: true, result: opts[:result]
+        port,
+        opts[:in],
+        out_opt,
+        opts[:err],
+        __MODULE__,
+        async_input: true,
+        result: opts[:result]
       )
     end)
 
     %Porcelain.Process{
       pid: pid,
       out: out_ret,
-      err: opts[:err],
+      err: opts[:err]
     }
   end
 
 
   @doc false
   defp find_executable(prog, :noshell) do
-    if exe=Common.find_executable(prog) do
+    if exe = Common.find_executable(prog) do
       {:spawn_executable, exe}
     else
-      throw "Command not found: #{prog}"
+      throw("Command not found: #{prog}")
     end
   end
 
   defp find_executable(prog, :shell) do
     {sh, _} = Common.shell_command(prog)
-    if exe=:os.find_executable(sh) do
+
+    if exe = :os.find_executable(sh) do
       {:spawn_executable, exe}
     else
-      throw "Shell not found for: #{prog}"
+      throw("Shell not found for: #{prog}")
     end
   end
 
-
-  defp port_options(:noshell, _, args, opts),
-    do: [{:args, args} | common_port_options(opts)]
+  defp port_options(:noshell, _, args, opts), do: [{:args, args} | common_port_options(opts)]
 
   defp port_options(:shell, prog, _, opts) do
     {_, args} = Common.shell_command(prog)
@@ -116,9 +129,9 @@ defmodule Porcelain.Driver.Basic do
   end
 
   defp common_port_options(opts) do
-    [:stream | Common.port_options(opts)]
-    ++ (if dir=opts[:dir], do: [{:cd, dir}], else: [])
-    ++ (if opts[:err] == :out, do: [:stderr_to_stdout], else: [])
+    [:stream | Common.port_options(opts)] ++
+      if(dir = opts[:dir], do: [{:cd, dir}], else: []) ++
+      if opts[:err] == :out, do: [:stderr_to_stdout], else: []
   end
 
   ###

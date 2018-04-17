@@ -41,23 +41,29 @@ defmodule Porcelain.Process do
   If timeout value is specified and the external process fails to terminate
   before it runs out, atom `:timeout` is returned.
   """
-  @spec await(t, non_neg_integer | :infinity) :: {:ok, Porcelain.Result.t} | {:error, :noproc | :timeout}
+  @spec await(t, non_neg_integer | :infinity) ::
+          {:ok, Porcelain.Result.t()} | {:error, :noproc | :timeout}
 
   def await(%P{pid: pid}, timeout \\ :infinity) do
     mon = Process.monitor(pid)
     ref = make_ref()
     send(pid, {:get_result, self(), ref})
+
     receive do
       {^ref, result} ->
         Process.demonitor(mon, [:flush])
         {:ok, result}
-      {:DOWN, ^mon, _, _, _info} -> {:error, :noproc}
-    after timeout ->
-      Process.demonitor(mon, [:flush])
-      {:error, :timeout}
-    end
-  end
 
+      {:DOWN, ^mon, _, _, _info} ->
+        {:error, :noproc}
+
+    after
+      timeout ->
+        Process.demonitor(mon, [:flush])
+        {:error, :timeout}
+    end
+
+  end
 
   @doc """
   Check if the process is still running.
@@ -65,7 +71,7 @@ defmodule Porcelain.Process do
   @spec alive?(t) :: true | false
 
   def alive?(%P{pid: pid}) do
-    #FIXME: does not work with pids from another node
+    # FIXME: does not work with pids from another node
     Process.alive?(pid)
   end
 
@@ -93,6 +99,7 @@ defmodule Porcelain.Process do
     mon = Process.monitor(pid)
     ref = make_ref()
     send(pid, {:stop, self(), ref})
+
     receive do
       {^ref, :stopped} -> Process.demonitor(mon, [:flush])
       {:DOWN, ^mon, _, _, _info} -> true

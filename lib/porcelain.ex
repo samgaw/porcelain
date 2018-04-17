@@ -1,4 +1,5 @@
 defmodule Porcelain do
+
   @moduledoc """
   The main module exposing the public API of Porcelain.
 
@@ -121,15 +122,14 @@ defmodule Porcelain do
       Basically, it accepts any kind of dict, including keyword lists.
 
   """
-  @spec exec(binary, [binary])            :: Porcelain.Result.t
-  @spec exec(binary, [binary], Keyword.t) :: Porcelain.Result.t
+  @spec exec(binary, [binary]) :: Porcelain.Result.t()
+  @spec exec(binary, [binary], Keyword.t()) :: Porcelain.Result.t()
 
   def exec(prog, args, options \\ [])
-        when is_binary(prog) and is_list(args) and is_list(options)
-  do
-    catch_throws fn ->
+      when is_binary(prog) and is_list(args) and is_list(options) do
+    catch_throws(fn ->
       driver().exec(prog, args, compile_exec_options(options))
-    end
+    end)
   end
 
 
@@ -143,13 +143,13 @@ defmodule Porcelain do
 
   It is similar to the `exec/3` function in all other respects.
   """
-  @spec shell(binary)            :: Porcelain.Result.t
-  @spec shell(binary, Keyword.t) :: Porcelain.Result.t
+  @spec shell(binary) :: Porcelain.Result.t()
+  @spec shell(binary, Keyword.t()) :: Porcelain.Result.t()
 
   def shell(cmd, options \\ []) when is_binary(cmd) and is_list(options) do
-    catch_throws fn ->
+    catch_throws(fn ->
       driver().exec_shell(cmd, compile_exec_options(options))
-    end
+    end)
   end
 
 
@@ -218,15 +218,14 @@ defmodule Porcelain do
         and `err: :stream`.
 
   """
-  @spec spawn(binary, [binary])            :: Porcelain.Process.t
-  @spec spawn(binary, [binary], Keyword.t) :: Porcelain.Process.t
+  @spec spawn(binary, [binary]) :: Porcelain.Process.t()
+  @spec spawn(binary, [binary], Keyword.t()) :: Porcelain.Process.t()
 
   def spawn(prog, args, options \\ [])
-    when is_binary(prog) and is_list(args) and is_list(options)
-  do
-    catch_throws fn ->
-      driver().spawn(prog, args, compile_spawn_options(options))
-    end
+    when is_binary(prog) and is_list(args) and is_list(options) do
+      catch_throws(fn ->
+        driver().spawn(prog, args, compile_spawn_options(options))
+      end)
   end
 
 
@@ -235,15 +234,14 @@ defmodule Porcelain do
 
   Works similar to `spawn/3`.
   """
-  @spec spawn_shell(binary)            :: Porcelain.Process.t
-  @spec spawn_shell(binary, Keyword.t) :: Porcelain.Process.t
+  @spec spawn_shell(binary) :: Porcelain.Process.t()
+  @spec spawn_shell(binary, Keyword.t()) :: Porcelain.Process.t()
 
   def spawn_shell(cmd, options \\ [])
-        when is_binary(cmd) and is_list(options)
-  do
-    catch_throws fn ->
-      driver().spawn_shell(cmd, compile_spawn_options(options))
-    end
+    when is_binary(cmd) and is_list(options) do
+      catch_throws(fn ->
+        driver().spawn_shell(cmd, compile_spawn_options(options))
+      end)
   end
 
 
@@ -279,24 +277,29 @@ defmodule Porcelain do
 
   defp compile_exec_options(options) do
     {good, bad} = Enum.reduce(options, {[], []}, fn {name, val}, {good, bad} ->
+
       case compile_exec_opt(name, val) do
-        nil        -> {good, bad ++ [{name, val}]}
-        {:ok, opt} -> {good ++ [{name, opt}], bad}
-      end
-    end)
+        nil         -> {good, bad ++ [{name, val}]}
+        {:ok, opt}  -> {good ++ [{name, opt}], bad}
+        end
+      end)
+
     {apply_exec_defaults(options, good), bad}
   end
 
   defp compile_exec_opt(name, val) do
     case name do
-      :in  -> compile_input_opt(val)
-      :out -> compile_output_opt(val)
-      :err -> compile_error_opt(val)
-      :env -> compile_env_opt(val)
+      :in   -> compile_input_opt(val)
+      :out  -> compile_output_opt(val)
+      :err  -> compile_error_opt(val)
+      :env  -> compile_env_opt(val)
+
       :dir when is_binary(val) ->
         {:ok, val}
+
       :async_in when val in [true, false] ->
         {:ok, val}
+
       _ -> nil
     end
   end
@@ -318,20 +321,20 @@ defmodule Porcelain do
         nil -> {good, bad ++ [opt]}
       end
     end)
+
     {apply_spawn_defaults(options, good), bad}
   end
 
   defp compile_spawn_opt(opt) do
     case opt do
-      {:in, :receive}     -> :ok
-      {:out, :stream}     -> :ok
-      {:out, {:send, pid}} when is_pid(pid) ->
-        :ok
-      {:err, :stream}     -> :ok
-      {:err, {:send, pid}} when is_pid(pid) ->
-        :ok
-      {:result, :keep}    -> :ok
-      {:result, :discard} -> :ok
+      {:in, :receive}                       -> :ok
+      {:out, :stream}                       -> :ok
+      {:out, {:send, pid}} when is_pid(pid) -> :ok
+      {:err, :stream}                       -> :ok
+      {:err, {:send, pid}} when is_pid(pid) -> :ok
+      {:result, :keep}                      -> :ok
+      {:result, :discard}                   -> :ok
+
       _ -> nil
     end
   end
@@ -346,6 +349,7 @@ defmodule Porcelain do
         else
           :discard
         end
+
       Keyword.put(good, :result, default)
     end
   end
@@ -358,13 +362,15 @@ defmodule Porcelain do
 
   defp compile_input_opt(opt) do
     result = case opt do
-      nil                                              -> nil
-      {:file, _}=x                                     -> x
-      {:path, path}=x when is_binary(path)             -> x
-      iodata when is_binary(iodata) or is_list(iodata) -> iodata
+      nil                                               -> nil
+      {:file, _} = x                                    -> x
+      {:path, path} = x when is_binary(path)            -> x
+      iodata when is_binary(iodata) or is_list(iodata)  -> iodata
+
       other ->
         if Enumerable.impl_for(other), do: other, else: :badval
     end
+
     if result != :badval, do: {:ok, result}
   end
 
@@ -378,34 +384,36 @@ defmodule Porcelain do
 
   defp compile_out_opt(opt, typ) do
     result = case opt do
-      ^typ                                   -> typ
-      nil                                    -> nil
-      :string                                -> {:string, ""}
-      :iodata                                -> {:iodata, ""}
-      {:file, _}=x                           -> x
-      {:path, path}=x when is_binary(path)   -> x
-      {:append, path}=x when is_binary(path) -> x
+      ^typ                                      -> typ
+      nil                                       -> nil
+      :string                                   -> {:string, ""}
+      :iodata                                   -> {:iodata, ""}
+      {:file, _} = x                            -> x
+      {:path, path} = x when is_binary(path)    -> x
+      {:append, path} = x when is_binary(path)  -> x
+
       coll ->
         if Collectable.impl_for(coll), do: coll, else: :badval
     end
+
     if result != :badval, do: {:ok, result}
   end
 
   defp compile_env_opt(val) do
     {vars, ok?} = Enum.map_reduce(val, true, fn
       {name, val}, ok? when (is_binary(name) or is_atom(name))
-                        and (is_binary(val) or val == false) ->
-        {{convert_env_name(name), convert_env_val(val)}, ok?}
+                       and (is_binary(val) or val == false) ->
+          {{convert_env_name(name), convert_env_val(val)}, ok?}
+
       other, _ -> {other, false}
     end)
+
     if ok?, do: {:ok, vars}
   end
 
-  defp convert_env_name(name) when is_binary(name),
-    do: String.to_charlist(name)
+  defp convert_env_name(name) when is_binary(name), do: String.to_charlist(name)
 
-  defp convert_env_name(name) when is_atom(name),
-    do: Atom.to_charlist(name)
+  defp convert_env_name(name) when is_atom(name), do: Atom.to_charlist(name)
 
   defp convert_env_val(false), do: false
 
@@ -415,9 +423,13 @@ defmodule Porcelain do
   defp driver() do
     case Application.fetch_env(:porcelain, :driver_internal) do
       {:ok, mod} -> mod
+
       _ ->
-        raise Porcelain.UsageError, message: "Looks like the :porcelain app is not running. " <>
-          "Make sure you've added :porcelain to the list of applications in your mix.exs."
+
+        raise Porcelain.UsageError, message:
+          "Looks like the :porcelain app is not running. Make sure you've" <>
+          "added :porcelain to the list of applications in your mix.exs."
     end
   end
+
 end

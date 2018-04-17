@@ -8,10 +8,11 @@ defmodule Porcelain.Init do
 
   def init() do
     driver = get_env(:driver)
+
     ok_pipe([
       fn -> init(driver) end,
       fn -> init_shell() end,
-      fn -> :ok end,
+      fn -> :ok end
     ])
   end
 
@@ -27,16 +28,21 @@ defmodule Porcelain.Init do
         case error do
           :goon_not_found ->
             if Application.get_env(:porcelain, :goon_warn_if_missing, true) do
-              Logger.info ["[Porcelain]: ", error_string(error)]
-              Logger.info "[Porcelain]: falling back to the basic driver."
-              Logger.info "[Porcelain]: (set `config :porcelain, driver: Porcelain.Driver.Basic` "
-                       <> "or `config :porcelain, goon_warn_if_missing: false` to disable this "
-                       <> "warning)"
+              Logger.info(["[Porcelain]: ", error_string(error)])
+              Logger.info("[Porcelain]: falling back to the basic driver.")
+
+              Logger.info(
+                "[Porcelain]: (set `config :porcelain, driver: Porcelain.Driver.Basic` " <>
+                "or `config :porcelain, goon_warn_if_missing: false` to disable this " <>
+                "warning)"
+              )
             end
+
           other ->
-            Logger.warn ["[Porcelain]: ", error_string(other)]
-            Logger.warn "[Porcelain]: falling back to the basic driver."
+            Logger.warn(["[Porcelain]: ", error_string(other)])
+            Logger.warn("[Porcelain]: falling back to the basic driver.")
         end
+
         set_driver(Basic)
     end
   end
@@ -67,7 +73,7 @@ defmodule Porcelain.Init do
   defp init_shell() do
     # Finding shell command logic from :os.cmd in OTP
     # https://github.com/erlang/otp/blob/8deb96fb1d017307e22d2ab88968b9ef9f1b71d0/lib/kernel/src/os.erl#L184
-    case :os.type do
+    case :os.type() do
       {:unix, _} ->
         set_env(:shell_command, {'sh', ["-c"]})
 
@@ -77,6 +83,7 @@ defmodule Porcelain.Init do
           {nil, _}        -> 'cmd'
           {cmd, _}        -> String.to_charlist(cmd)
         end
+
         set_env(:shell_command, {shell, ["/c"]})
     end
   end
@@ -99,19 +106,19 @@ defmodule Porcelain.Init do
 
   defp find_goon() do
     cond do
-      path=get_env(:goon_driver_path) ->
-        path
-      File.exists?("goon") ->
-        Path.absname("goon")
-      exe=:os.find_executable('goon') ->
-        List.to_string(exe)
+      path = get_env(:goon_driver_path) -> path
+
+      File.exists?("goon") -> Path.absname("goon")
+
+      exe = :os.find_executable('goon') -> List.to_string(exe)
+
       true -> false
     end
   end
 
-  defp ok_pipe([h|t]) do
+  defp ok_pipe([h | t]) do
     case h.() do
-      {:error, _}=error -> error
+      {:error, _} = error -> error
       :ok -> ok_pipe(t)
     end
   end
@@ -119,7 +126,7 @@ defmodule Porcelain.Init do
   defp ok_pipe([]), do: :ok
 
   defp error_string({:goon_bad_version, path}) do
-    "goon executable at #{path} does not support protocol version #{Goon.proto_version}"
+    "goon executable at #{path} does not support protocol version #{Goon.proto_version()}"
   end
 
   defp error_string(:goon_not_found) do

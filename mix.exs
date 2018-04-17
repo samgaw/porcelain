@@ -1,6 +1,7 @@
 defmodule Porcelain.Mixfile do
   use Mix.Project
 
+
   def project do
     [
       app: :porcelain,
@@ -9,20 +10,20 @@ defmodule Porcelain.Mixfile do
       deps: deps(),
       description: description(),
       docs: docs(),
-      package: package(),
+      package: package()
     ]
   end
 
   def application do
     [
       applications: [:logger, :crypto],
-      mod: {Porcelain.App, []},
+      mod: {Porcelain.App, []}
     ]
   end
 
   def docs do
     [
-      extras: [{"README.md", title: "Readme"}],
+      extras: [{"README.md", title: "Readme"}]
     ]
   end
 
@@ -38,7 +39,7 @@ defmodule Porcelain.Mixfile do
       maintainers: ["Alexei Sholik"],
       licenses: ["MIT"],
       links: %{
-        "GitHub" => "https://github.com/alco/porcelain",
+        "GitHub" => "https://github.com/alco/porcelain"
       }
     ]
   end
@@ -46,7 +47,8 @@ defmodule Porcelain.Mixfile do
   defp deps do
     [
       {:earmark, "> 0.0.0", only: :dev},
-      {:ex_doc, "> 0.0.0", only: :dev},
+      {:ex_doc, "> 0.0.0", only: :dev}
     ]
   end
+
 end
